@@ -19,6 +19,9 @@
 #include <QQueue>
 #include <QFile>
 #include <QFileDialog>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <cassert>
 using std::vector;
 

@@ -247,8 +247,6 @@ void MainWindow::runSingleStep() {
         scoretext += "s";
     }
     ui->scoreLabel->setText(scoretext);
-    //repaint();
-    //qDebug() << headcoord << tailcoord;
 }
 
 void MainWindow::generateFruit() {
@@ -319,64 +317,67 @@ void MainWindow::save() {
         return;
     }
     QTextStream outstream(&savefile);
-    outstream << int(status) << "\n" << int(direction) << "\n" << tick_count << "\n" << score << "\n" << latency << "\n";
-    outstream << headcoord.x() << "\n" << headcoord.y() << "\n" << tailcoord.x() << "\n" << tailcoord.y() << "\n";
+    QJsonObject obj;
+    obj.insert("status", int(status));
+    obj.insert("direction", int(direction));
+    obj.insert("tick_count", tick_count);
+    obj.insert("score", score);
+    obj.insert("headcoord_x", headcoord.x());
+    obj.insert("headcoord_y", headcoord.y());
+    obj.insert("tailcoord_x", tailcoord.x());
+    obj.insert("tailcoord_y", tailcoord.y());
+    QString grid_str, grid_b_str;
     for (int i = 0; i < Height; i++) {
-        QString line("");
         for (int j = 0; j < Width; j++) {
-            line += QString::number(int(grid[i][j]));
-        } outstream << line << "\n";
+            grid_str += QString::number(int(grid[i][j]));
+        } grid_str += "@";
     }
+    obj.insert("grid", grid_str);
     for (int i = 0; i < Height; i++) {
-        QString line("");
         for (int j = 0; j < Width; j++) {
-            line += QString::number(int(grid_b[i][j]));
-        } outstream << line << "\n";
+            grid_b_str += QString::number(int(grid_b[i][j]));
+        } grid_b_str += "@";
     }
+    obj.insert("grid_b", grid_b_str);
+    QJsonDocument doc = QJsonDocument(obj);
+    QByteArray savedoc = doc.toJson();
+    outstream << savedoc;
 }
 
 void MainWindow::load() {
     QString filename = QFileDialog::getOpenFileName(this, tr("Select Load File"), ".");
     loadfile.setFileName(filename);
     if (!loadfile.open(QIODevice::ReadOnly)) {
+        qDebug() << "Load Failed";
         return;
     }
-    QString line;
-    QTextStream instream(&loadfile);
-    line = loadfile.readLine();
-    status = Status(line.toInt());
-    line = loadfile.readLine();
-    direction = Direction(line.toInt());
-    line = loadfile.readLine();
-    tick_count = line.toInt();
-    line = loadfile.readLine();
-    score = line.toInt();
-    line = loadfile.readLine();
-    latency = line.toInt();
-    line = loadfile.readLine();
-    headcoord.setX(line.toInt());
-    line = loadfile.readLine();
-    headcoord.setY(line.toInt());
-    line = loadfile.readLine();
-    tailcoord.setX(line.toInt());
-    line = loadfile.readLine();
-    tailcoord.setY(line.toInt());
-    for (int i = 0; i < Height; i++) {
-        line = loadfile.readLine();
-        for (int j = 0; j < Width; j++) {
-            QChar ch = line[j];
-            grid[i][j] = Block(ch.unicode() - '0');
-        }
+    QByteArray array = loadfile.readAll();
+    QJsonParseError parseError;
+    QJsonDocument jsonDoc(QJsonDocument::fromJson(array, &parseError));
+    if (parseError.error != QJsonParseError::NoError) {
+        qDebug() << "Parse Failed";
+        return;
     }
+    QJsonObject obj = jsonDoc.object();
+    status = Status(obj.value("status").toInt());
+    direction = Direction(obj.value("direction").toInt());
+    tick_count = obj.value("tick_count").toInt();
+    score = obj.value("score").toInt();
+    headcoord.setX(obj.value("headcoord_x").toInt());
+    headcoord.setY(obj.value("headcoord_y").toInt());
+    tailcoord.setX(obj.value("tailcoord_x").toInt());
+    tailcoord.setY(obj.value("tailcoord_y").toInt());
+    QString grid_str = obj.value("grid").toString();
+    QString grid_b_str = obj.value("grid_b").toString();
+    QStringList grid_list = grid_str.split("@");
+    QStringList grid_b_list = grid_b_str.split("@");
     for (int i = 0; i < Height; i++) {
-        line = loadfile.readLine();
         for (int j = 0; j < Width; j++) {
-            QChar ch = line[j];
-            grid_b[i][j] = Direction(ch.unicode() - '0');
+            grid[i][j] = Block(grid_list[i][j].unicode() - '0');
+            grid_b[i][j] = Direction(grid_b_list[i][j].unicode() - '0');
         }
     }
     setPaused();
-    //qDebug() << (int)status << (int)direction << headcoord << tailcoord;
 }
 
 void MainWindow::setNotBegin() {
