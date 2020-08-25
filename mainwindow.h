@@ -17,6 +17,8 @@
 #include <QDebug>
 #include <vector>
 #include <QQueue>
+#include <QFile>
+#include <QFileDialog>
 #include <cassert>
 using std::vector;
 
@@ -66,17 +68,18 @@ private:
     enum class Direction {
         Nothing = 0, Left = 1, Up = 2, Down = 3, Right = 4
     } direction;
-    const int dx[4] = {0, -1, 1, 0}, dy[4] = {-1, 0, 0, 1};
+    const int dx[4] = {0, -1, 1, 0}, dy[4] = {-1, 0, 0, 1}, speeds[5] = {150, 125, 100, 75, 50};
     const QColor colors[5] = {QColor("#273540"), QColor("#648F6C"), QColor("#BBC2C0"), QColor("#E2E5DE"), QColor("#FDB106")};
-    const QColor bri_colors[5] = {QColor("#7EACCF"), QColor("#9BDDA7"), QColor("#E4EDEA"), QColor("#F4F7F0"), QColor("#FFB206")};
+    const QColor bri_colors[5] = {QColor("#445D70"), QColor("#9BDDA7"), QColor("#E4EDEA"), QColor("#F4F7F0"), QColor("#FFB206")};
     int leftpos = 170, toppos = 40, latency = 0, Length = 15, mousex, mousey;
     QPoint headcoord, tailcoord;
     const static int Height = 40, Width = 40, StatusBarMargin = 20, Margin = 20;
     vector<vector<Block>> grid;
     vector<vector<Direction>> grid_b;
     QTimer* globalTimer;
-    int tick_count;
+    int tick_count, score;
     QQueue<Direction> operations;
+    QFile savefile, loadfile;
 
     QPoint Pix2Map(QPoint p);
     QPoint Map2Pix(QPoint c);
@@ -88,6 +91,8 @@ private:
     void setEnded();
     void runSingleStep();
     void generateFruit();
+    void save();
+    void load();
     bool eat(QPoint head);
     bool check(QPoint head);
     void reset();

@@ -10,7 +10,8 @@ MainWindow::MainWindow(QWidget *parent)
     , headcoord(10, 11)
     , tailcoord(10, 10)
     , globalTimer(new QTimer(this))
-    , tick_count(0) {
+    , tick_count(0)
+    , score(0) {
     ui->setupUi(this);
     setFocusPolicy(Qt::StrongFocus);
     setWindowTitle(tr("MySnake"));
@@ -24,6 +25,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->touchButton_2->setEnabled(false);
     ui->touchButton_3->setVisible(false);
     ui->touchButton_3->setEnabled(false);
+    ui->spinBox->setMaximum(5);
+    ui->spinBox->setMinimum(1);
     grid.resize(Height);
     grid_b.resize(Height);
     for (int i = 0; i < Height; i++) {
@@ -48,7 +51,12 @@ MainWindow::MainWindow(QWidget *parent)
     });
     connect(ui->restartButton, &QPushButton::clicked, [=]() {
         reset();
-        //setGaming();
+    });
+    connect(ui->saveButton, &QPushButton::clicked, [=]() {
+        save();
+    });
+    connect(ui->loadButton, &QPushButton::clicked, [=]() {
+        load();
     });
     connect(ui->exitButton, &QPushButton::clicked, [=]() {
         close();
@@ -84,14 +92,12 @@ void MainWindow::paintEvent(QPaintEvent*) {
     int VerticalLength = (frameGeometry().height() - Margin - toppos) / Height;
     Length = qMin(HorizentalLength, VerticalLength);
 
-
     QPainter painter(this);
     painter.translate(leftpos, toppos);
     QPen pen(QColor("#000000"));
     QBrush brush(QColor("#273540"));
 
     QPoint cursorpos = mapFromGlobal(QCursor::pos());
-    qDebug() << cursorpos;
     if (cursorpos.x() >= 170 || cursorpos.x() <= 770 || cursorpos.y() >= 40 || cursorpos.y() <= 640) {
         QPoint cursorcoord = Pix2Map(cursorpos);
         mousex = cursorcoord.y();
@@ -235,8 +241,14 @@ void MainWindow::runSingleStep() {
     if (tick_count != 1) {
         stepnum += "s";
     }
-    ui->TimeLabel->setText(QString(stepnum));
+    ui->TimeLabel->setText(stepnum);
+    QString scoretext = QString("%1 score").arg(score);
+    if (score > 1) {
+        scoretext += "s";
+    }
+    ui->scoreLabel->setText(scoretext);
     //repaint();
+    //qDebug() << headcoord << tailcoord;
 }
 
 void MainWindow::generateFruit() {
@@ -251,6 +263,7 @@ void MainWindow::generateFruit() {
 
 bool MainWindow::eat(QPoint head) {
     if (grid[head.x()][head.y()] == Block::Fruit) {
+        score += ui->spinBox->value();
         generateFruit();
         return true;
     } else return false;
@@ -291,9 +304,79 @@ void MainWindow::reset() {
     direction = Direction::Right;
     tick_count = 0;
     ui->TimeLabel->setText(QString("0 step"));
-    //globalTimer->stop();
+    score = 0;
+    ui->scoreLabel->setText(QString("0 score"));
     setNotBegin();
     generateFruit();
+}
+
+void MainWindow::save() {
+    if (savefile.exists() == false) {
+        QString filename = QFileDialog::getOpenFileName(this, tr("Select Save File"), "*.json");
+        savefile.setFileName(filename);
+    }
+    if (!savefile.open(QIODevice::WriteOnly)) {
+        return;
+    }
+    QTextStream outstream(&savefile);
+    outstream << int(status) << "\n" << int(direction) << "\n" << tick_count << "\n" << score << "\n" << latency << "\n";
+    outstream << headcoord.x() << "\n" << headcoord.y() << "\n" << tailcoord.x() << "\n" << tailcoord.y() << "\n";
+    for (int i = 0; i < Height; i++) {
+        QString line("");
+        for (int j = 0; j < Width; j++) {
+            line += QString::number(int(grid[i][j]));
+        } outstream << line << "\n";
+    }
+    for (int i = 0; i < Height; i++) {
+        QString line("");
+        for (int j = 0; j < Width; j++) {
+            line += QString::number(int(grid_b[i][j]));
+        } outstream << line << "\n";
+    }
+}
+
+void MainWindow::load() {
+    QString filename = QFileDialog::getOpenFileName(this, tr("Select Load File"), ".");
+    loadfile.setFileName(filename);
+    if (!loadfile.open(QIODevice::ReadOnly)) {
+        return;
+    }
+    QString line;
+    QTextStream instream(&loadfile);
+    line = loadfile.readLine();
+    status = Status(line.toInt());
+    line = loadfile.readLine();
+    direction = Direction(line.toInt());
+    line = loadfile.readLine();
+    tick_count = line.toInt();
+    line = loadfile.readLine();
+    score = line.toInt();
+    line = loadfile.readLine();
+    latency = line.toInt();
+    line = loadfile.readLine();
+    headcoord.setX(line.toInt());
+    line = loadfile.readLine();
+    headcoord.setY(line.toInt());
+    line = loadfile.readLine();
+    tailcoord.setX(line.toInt());
+    line = loadfile.readLine();
+    tailcoord.setY(line.toInt());
+    for (int i = 0; i < Height; i++) {
+        line = loadfile.readLine();
+        for (int j = 0; j < Width; j++) {
+            QChar ch = line[j];
+            grid[i][j] = Block(ch.unicode() - '0');
+        }
+    }
+    for (int i = 0; i < Height; i++) {
+        line = loadfile.readLine();
+        for (int j = 0; j < Width; j++) {
+            QChar ch = line[j];
+            grid_b[i][j] = Direction(ch.unicode() - '0');
+        }
+    }
+    setPaused();
+    //qDebug() << (int)status << (int)direction << headcoord << tailcoord;
 }
 
 void MainWindow::setNotBegin() {
@@ -304,6 +387,7 @@ void MainWindow::setNotBegin() {
     ui->restartButton->setDisabled(true);
     ui->saveButton->setDisabled(true);
     ui->loadButton->setDisabled(false);
+    ui->spinBox->setDisabled(false);
     setFocus(Qt::MouseFocusReason);
 }
 
@@ -316,6 +400,8 @@ void MainWindow::setGaming() {
         setWindowTitle(tr("MySnake"));
         special = Special::Ordinary;
     }
+    globalTimer->stop();
+    globalTimer->start(speeds[ui->spinBox->value() - 1]);
     status = Status::Gaming;
     ui->startButton->setDisabled(true);
     ui->pauseButton->setDisabled(false);
@@ -323,6 +409,7 @@ void MainWindow::setGaming() {
     ui->restartButton->setDisabled(true);
     ui->saveButton->setDisabled(true);
     ui->loadButton->setDisabled(true);
+    ui->spinBox->setDisabled(true);
     setFocus(Qt::MouseFocusReason);
     setFixedSize(width(), height());
 }
@@ -336,6 +423,7 @@ void MainWindow::setPaused() {
     ui->restartButton->setDisabled(false);
     ui->saveButton->setDisabled(false);
     ui->loadButton->setDisabled(true);
+    ui->spinBox->setDisabled(true);
     setFocus(Qt::MouseFocusReason);
     setFixedSize(width(), height());
 }
@@ -348,6 +436,7 @@ void MainWindow::setEnded() {
     ui->restartButton->setDisabled(false);
     ui->saveButton->setDisabled(true);
     ui->loadButton->setDisabled(true);
+    ui->spinBox->setDisabled(true);
     setFocus(Qt::MouseFocusReason);
     setFixedSize(width(), height());
 }

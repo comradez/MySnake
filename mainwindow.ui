@@ -118,14 +118,14 @@
    <widget class="QLabel" name="TimeLabel">
     <property name="geometry">
      <rect>
-      <x>50</x>
-      <y>390</y>
-      <width>67</width>
+      <x>40</x>
+      <y>430</y>
+      <width>91</width>
       <height>17</height>
      </rect>
     </property>
     <property name="text">
-     <string>0 Step</string>
+     <string>0 step</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignCenter</set>
@@ -148,7 +148,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>570</y>
+      <y>620</y>
       <width>121</width>
       <height>25</height>
      </rect>
@@ -186,7 +186,7 @@ is PERFECT</string>
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>460</y>
+      <y>510</y>
       <width>151</width>
       <height>101</height>
      </rect>
@@ -200,6 +200,48 @@ is PERFECT</string>
     <property name="wordWrap">
      <bool>true</bool>
     </property>
+   </widget>
+   <widget class="QLabel" name="scoreLabel">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>460</y>
+      <width>91</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>0 score</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+   </widget>
+   <widget class="QWidget" name="widget_2" native="true">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>380</y>
+      <width>109</width>
+      <height>44</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Speed</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="spinBox">
+       <property name="value">
+        <number>5</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
