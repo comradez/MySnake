@@ -72,9 +72,9 @@ private:
         Nothing = 0, Left = 1, Up = 2, Down = 3, Right = 4
     } direction;
     const int dx[4] = {0, -1, 1, 0}, dy[4] = {-1, 0, 0, 1}, speeds[5] = {150, 125, 100, 75, 50};
-    const QColor colors[5] = {QColor("#273540"), QColor("#648F6C"), QColor("#BBC2C0"), QColor("#E2E5DE"), QColor("#FDB106")};
-    const QColor bri_colors[5] = {QColor("#445D70"), QColor("#9BDDA7"), QColor("#E4EDEA"), QColor("#F4F7F0"), QColor("#FFB206")};
-    int leftpos = 170, toppos = 40, latency = 0, Length = 15, mousex, mousey;
+    const QColor colors[5] = {QColor("#ECE5DB"), QColor("#E08863"), QColor("#C0C0C0"), QColor("#B0B0B0"), QColor("#DBBE3F")};
+    const QColor bri_colors[5] = {QColor("#F6EEE4"), QColor("#F0916A"), QColor("#D0D0D0"), QColor("#C0C0C0"), QColor("#EDCE44")};
+    int leftpos = 170, toppos = 60, latency = 0, Length = 15, mousex, mousey;
     QPoint headcoord, tailcoord;
     const static int Height = 40, Width = 40, StatusBarMargin = 20, Margin = 20;
     vector<vector<Block>> grid;

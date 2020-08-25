@@ -88,17 +88,22 @@ QPoint MainWindow::Map2Pix(QPoint c) {
 }
 
 void MainWindow::paintEvent(QPaintEvent*) {
-    int HorizentalLength = (frameGeometry().width() - Margin - leftpos) / Width;
-    int VerticalLength = (frameGeometry().height() - Margin - toppos) / Height;
+    //QPainter
+    int HorizentalLength = (geometry().width() - leftpos) / Width;
+    int VerticalLength = (geometry().height() - toppos) / Height;
     Length = qMin(HorizentalLength, VerticalLength);
 
     QPainter painter(this);
-    painter.translate(leftpos, toppos);
     QPen pen(QColor("#000000"));
-    QBrush brush(QColor("#273540"));
+    QBrush brush(QColor("#ECE7DF"));
 
+    //painter.setPen(Qt::NoPen);
+    //painter.setBrush(brush);
+    //painter.drawRect(0, 0, geometry().width(), geometry().height());
+
+    painter.translate(leftpos, toppos);
     QPoint cursorpos = mapFromGlobal(QCursor::pos());
-    if (cursorpos.x() >= 170 || cursorpos.x() <= 770 || cursorpos.y() >= 40 || cursorpos.y() <= 640) {
+    if (cursorpos.x() >= 170 || cursorpos.x() <= 770 || cursorpos.y() >= 60 || cursorpos.y() <= 660) {
         QPoint cursorcoord = Pix2Map(cursorpos);
         mousex = cursorcoord.y();
         mousey = cursorcoord.x();
@@ -123,7 +128,7 @@ void MainWindow::paintEvent(QPaintEvent*) {
 void MainWindow::mousePressEvent(QMouseEvent *event) {
     if (status == Status::NotBegin) {
         QPoint pos = event->pos();
-        if (pos.x() < 170 || pos.x() > 770 || pos.y() < 40 || pos.y() > 640) {
+        if (pos.x() < 170 || pos.x() > 770 || pos.y() < 60 || pos.y() > 660) {
             return;
         }
         QPoint temp = Pix2Map(event->pos());
