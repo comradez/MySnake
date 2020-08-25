@@ -34,6 +34,7 @@ public:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
     //bool eventFilter(QObject* obj, QEvent* ev) override;
 
 private slots:
@@ -67,7 +68,8 @@ private:
     } direction;
     const int dx[4] = {0, -1, 1, 0}, dy[4] = {-1, 0, 0, 1};
     const QColor colors[5] = {QColor("#273540"), QColor("#648F6C"), QColor("#BBC2C0"), QColor("#E2E5DE"), QColor("#FDB106")};
-    int leftpos = 170, toppos = 40, latency = 0, Length = 15;
+    const QColor bri_colors[5] = {QColor("#7EACCF"), QColor("#9BDDA7"), QColor("#E4EDEA"), QColor("#F4F7F0"), QColor("#FFB206")};
+    int leftpos = 170, toppos = 40, latency = 0, Length = 15, mousex, mousey;
     QPoint headcoord, tailcoord;
     const static int Height = 40, Width = 40, StatusBarMargin = 20, Margin = 20;
     vector<vector<Block>> grid;

@@ -36,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent)
     grid_b[10][11] = Direction::Nothing;
     setNotBegin();
     generateFruit();
+    globalTimer->start(50);
     connect(ui->startButton, &QPushButton::clicked, [=]() {
         setGaming();
     });
@@ -53,7 +54,9 @@ MainWindow::MainWindow(QWidget *parent)
         close();
     });
     connect(globalTimer, &QTimer::timeout, [=]() {
-        runSingleStep();
+        if (status == Status::Gaming)
+            runSingleStep();
+        repaint();
     });
     repaint();
 }
@@ -81,14 +84,28 @@ void MainWindow::paintEvent(QPaintEvent*) {
     int VerticalLength = (frameGeometry().height() - Margin - toppos) / Height;
     Length = qMin(HorizentalLength, VerticalLength);
 
+
     QPainter painter(this);
     painter.translate(leftpos, toppos);
     QPen pen(QColor("#000000"));
     QBrush brush(QColor("#273540"));
 
+    QPoint cursorpos = mapFromGlobal(QCursor::pos());
+    qDebug() << cursorpos;
+    if (cursorpos.x() >= 170 || cursorpos.x() <= 770 || cursorpos.y() >= 40 || cursorpos.y() <= 640) {
+        QPoint cursorcoord = Pix2Map(cursorpos);
+        mousex = cursorcoord.y();
+        mousey = cursorcoord.x();
+    } else {
+        mousex = mousey = -1;
+    }
     for (int i = 0; i < Height; i++) {
         for (int j = 0; j < Width; j++) {
-            brush.setColor(colors[int(grid[i][j])]);
+            if (mousex == i && mousey == j) {
+                brush.setColor(bri_colors[int(grid[i][j])]);
+            } else {
+                brush.setColor(colors[int(grid[i][j])]);
+            }
             painter.setPen(Qt::NoPen);
             painter.setBrush(brush);
             QRectF currRect(j * Length, i * Length, Length, Length);
@@ -161,6 +178,10 @@ void MainWindow::keyPressEvent(QKeyEvent *event) { //WASD and Vim-Style HJKL sup
     }
 }
 
+void MainWindow::mouseMoveEvent(QMouseEvent*) {
+    repaint();
+}
+
 QPoint MainWindow::getNewTail(QPoint tail) { //Search for new Tail Position
     int x_offset = dx[int(grid_b[tail.x()][tail.y()]) - 1];
     int y_offset = dy[int(grid_b[tail.x()][tail.y()]) - 1];
@@ -215,7 +236,7 @@ void MainWindow::runSingleStep() {
         stepnum += "s";
     }
     ui->TimeLabel->setText(QString(stepnum));
-    repaint();
+    //repaint();
 }
 
 void MainWindow::generateFruit() {
@@ -270,7 +291,7 @@ void MainWindow::reset() {
     direction = Direction::Right;
     tick_count = 0;
     ui->TimeLabel->setText(QString("0 step"));
-    globalTimer->stop();
+    //globalTimer->stop();
     setNotBegin();
     generateFruit();
 }
@@ -296,7 +317,6 @@ void MainWindow::setGaming() {
         special = Special::Ordinary;
     }
     status = Status::Gaming;
-    globalTimer->start(50);
     ui->startButton->setDisabled(true);
     ui->pauseButton->setDisabled(false);
     ui->continueButton->setDisabled(true);
@@ -309,7 +329,7 @@ void MainWindow::setGaming() {
 
 void MainWindow::setPaused() {
     status = Status::Paused;
-    globalTimer->stop();
+    //globalTimer->stop();
     ui->startButton->setDisabled(true);
     ui->pauseButton->setDisabled(true);
     ui->continueButton->setDisabled(false);
@@ -322,7 +342,6 @@ void MainWindow::setPaused() {
 
 void MainWindow::setEnded() {
     status = Status::Ended;
-    globalTimer->stop();
     ui->startButton->setDisabled(true);
     ui->pauseButton->setDisabled(true);
     ui->continueButton->setDisabled(true);
