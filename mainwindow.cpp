@@ -175,9 +175,9 @@ QPoint MainWindow::getNewHead(QPoint head, Direction direction) { //Generate new
 void MainWindow::runSingleStep() {
     if (operations.empty() == false) {
         Direction neodirection = operations.dequeue();
-        if (neodirection != direction && int(neodirection) + int(direction) != 5) {
-            direction = neodirection;
-        } //else do nothing
+        while (neodirection == direction || int(neodirection) + int(direction) == 5) {
+            neodirection = operations.dequeue();
+        } direction = neodirection;
     } //else there are no valid operations, just keep the current direction.
     tick_count  += 1;
     if (latency > 0) {
