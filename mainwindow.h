@@ -1,10 +1,14 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "paintwidget.h"
+#include "base.h"
+#include "snake.h"
+#include "obstacle.h"
+#include "fruit.h"
 #include <QMainWindow>
 #include <QRandomGenerator>
 #include <QMessageBox>
+#include <QSet>
 #include <QMouseEvent>
 #include <QKeyEvent>
 #include <QPoint>
@@ -17,6 +21,7 @@
 #include <QDebug>
 #include <vector>
 #include <QQueue>
+#include <QVector>
 #include <QFile>
 #include <QFileDialog>
 #include <QJsonObject>
@@ -40,7 +45,6 @@ public:
     void mousePressEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
-    //bool eventFilter(QObject* obj, QEvent* ev) override;
 
 private slots:
     void on_actionDon_t_touch_triggered();
@@ -59,45 +63,42 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-    enum class Special {
-        Ordinary = 0, EatGlass = 1
-    } special;
-    enum class Block {
-        Nothing = 0, Obstacle = 1, Snake = 2, Head = 3, Fruit = 4
-    };
-    enum class Status {
-        NotBegin = 0, Gaming = 1, Paused = 2, Ended = 3
-    } status;
-    enum class Direction {
-        Nothing = 0, Left = 1, Up = 2, Down = 3, Right = 4
-    } direction;
-    const int dx[4] = {0, -1, 1, 0}, dy[4] = {-1, 0, 0, 1}, speeds[5] = {150, 125, 100, 75, 50};
-    const QColor colors[5] = {QColor("#ECE5DB"), QColor("#E08863"), QColor("#C0C0C0"), QColor("#B0B0B0"), QColor("#DBBE3F")};
-    const QColor bri_colors[5] = {QColor("#F6EEE4"), QColor("#F0916A"), QColor("#D0D0D0"), QColor("#C0C0C0"), QColor("#EDCE44")};
-    int leftpos = 170, toppos = 60, latency = 0, Length = 15, mousex, mousey;
-    QPoint headcoord, tailcoord;
-    const static int Height = 40, Width = 40, StatusBarMargin = 20, Margin = 20;
-    vector<vector<Block>> grid;
-    vector<vector<Direction>> grid_b;
-    QTimer* globalTimer;
-    int tick_count, score;
-    QQueue<Direction> operations;
-    QFile savefile, loadfile;
+    typedef Assist::Special Special;
+    typedef Assist::Block Block;
+    typedef Assist::Status Status;
+    typedef Assist::Direction Direction;
+    typedef QPair<int,int> Point;
+    Special special;
+    Status status;
+    Direction direction;
+    Snake* snake1;
+    QSet<Obstacle> obstacles;
+    QColor canvasColor, obstacleColor, fruitColor;
+    QColor canvasColorBright, obstacleColorBright, fruitColorBright;
+    Fruit* fruit;
 
-    QPoint Pix2Map(QPoint p);
-    QPoint Map2Pix(QPoint c);
-    QPoint getNewTail(QPoint tail);
-    QPoint getNewHead(QPoint head, Direction direction);
+    const int speeds[5] = {150, 125, 100, 75, 50};
+    int leftpos = 170, toppos = 60, Height = 40, Width = 40, tickCount = 0;
+    const static int Length = 15, Margin = 20;
+    QTimer* globalTimer;
+    QQueue<Direction> operations;
+    QFile saveFile, loadFile;
+
+    Point Pix2Map(QPoint p);
+    QPoint Map2Pix(Point c);
+    bool inTheMap(QPoint _point);
+    bool checkOverFlow(Point pos);
     void setNotBegin();
     void setGaming();
     void setPaused();
     void setEnded();
     void runSingleStep();
-    void generateFruit();
+    void generateNewFruit(Point newHead);
     void save();
     void load();
-    bool eat(QPoint head);
-    bool check(QPoint head);
     void reset();
+    Block getCoordType(Point pos);
+    QJsonObject obstaclesToJson() const;
+    void jsonToObstacles(QJsonObject obj);
 };
 #endif // MAINWINDOW_H

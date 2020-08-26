@@ -7,15 +7,21 @@ MainWindow::MainWindow(QWidget *parent)
     , special(Special::Ordinary)
     , status(Status::NotBegin)
     , direction(Direction::Right)
-    , headcoord(10, 11)
-    , tailcoord(10, 10)
-    , globalTimer(new QTimer(this))
-    , tick_count(0)
-    , score(0) {
+    , snake1(new Snake())
+    , canvasColor(QColor("#ECE5DB"))
+    , obstacleColor(QColor("#E08863"))
+    , fruitColor(QColor("#DBBE3F"))
+    , canvasColorBright(QColor("#F6EEE4"))
+    , obstacleColorBright(QColor("#F0916A"))
+    , fruitColorBright(QColor("#EDCE44"))
+    , fruit(new Fruit())
+    , tickCount(0)
+    , globalTimer(new QTimer(this)) {
     ui->setupUi(this);
     setFocusPolicy(Qt::StrongFocus);
     setWindowTitle(tr("MySnake"));
-    //Set the size of the grid
+    setMinimumSize(size());
+
     ui->lineEdit->setVisible(false);
     ui->lineEdit->setEnabled(false);
     ui->label_2->setVisible(false);
@@ -27,18 +33,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->touchButton_3->setEnabled(false);
     ui->spinBox->setMaximum(5);
     ui->spinBox->setMinimum(1);
-    grid.resize(Height);
-    grid_b.resize(Height);
-    for (int i = 0; i < Height; i++) {
-        grid[i].resize(Width);
-        grid_b[i].resize(Width);
-    }
-    grid[10][10] = Block::Snake;
-    grid_b[10][10] = Direction::Right;
-    grid[10][11] = Block::Head;
-    grid_b[10][11] = Direction::Nothing;
+
     setNotBegin();
-    generateFruit();
     globalTimer->start(50);
     connect(ui->startButton, &QPushButton::clicked, [=]() {
         setGaming();
@@ -70,74 +66,103 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 MainWindow::~MainWindow() {
+    delete fruit;
+    delete snake1;
     delete ui;
 }
 
-QPoint MainWindow::Pix2Map(QPoint p) {
+Point MainWindow::Pix2Map(QPoint p) {
     int px = p.x(), py = p.y();
     int cx = (px - leftpos) / Length;
     int cy = (py - toppos) / Length;
-    return QPoint(cx, cy);
+    return qMakePair(cy, cx);
 }
 
-QPoint MainWindow::Map2Pix(QPoint c) {
-    int cx = c.x(), cy = c.y();
+QPoint MainWindow::Map2Pix(Point c) {
+    int cx = c.first, cy = c.second;
     int px = cx * Length + leftpos;
     int py = cy * Length + toppos;
     return QPoint(px, py);
 }
 
 void MainWindow::paintEvent(QPaintEvent*) {
-    //QPainter
-    int HorizentalLength = (geometry().width() - leftpos) / Width;
-    int VerticalLength = (geometry().height() - toppos) / Height;
-    Length = qMin(HorizentalLength, VerticalLength);
+    Width = (geometry().width() - leftpos - Margin) / Length;
+    Height = (geometry().height() - toppos - Margin) / Length;
 
     QPainter painter(this);
-    QPen pen(QColor("#000000"));
-    QBrush brush(QColor("#ECE7DF"));
-
-    //painter.setPen(Qt::NoPen);
-    //painter.setBrush(brush);
-    //painter.drawRect(0, 0, geometry().width(), geometry().height());
+    QBrush brush(QColor("#ECE5DB"));
 
     painter.translate(leftpos, toppos);
-    QPoint cursorpos = mapFromGlobal(QCursor::pos());
-    if (cursorpos.x() >= 170 || cursorpos.x() <= 770 || cursorpos.y() >= 60 || cursorpos.y() <= 660) {
-        QPoint cursorcoord = Pix2Map(cursorpos);
-        mousex = cursorcoord.y();
-        mousey = cursorcoord.x();
-    } else {
-        mousex = mousey = -1;
-    }
-    for (int i = 0; i < Height; i++) {
-        for (int j = 0; j < Width; j++) {
-            if (mousex == i && mousey == j) {
-                brush.setColor(bri_colors[int(grid[i][j])]);
-            } else {
-                brush.setColor(colors[int(grid[i][j])]);
-            }
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(brush);
-            QRectF currRect(j * Length, i * Length, Length, Length);
-            painter.drawRect(currRect);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(brush);
+    painter.drawRect(0, 0, Length * Width, Length * Height);
+
+    for (auto it = snake1->expose().rbegin(); it != snake1->expose().rend(); it++) {
+        int hori = it->second, vert = it->first;
+        QBrush snakebrush("#C0C0C0");
+        if (it == snake1->expose().rbegin()) {
+            snakebrush.setColor(snake1->getHeadColor());
+        } else {
+            snakebrush.setColor(snake1->getBodyColor());
         }
+        painter.setBrush(snakebrush);
+        painter.drawRect(hori * Length, vert * Length, Length, Length);
+    }
+
+    for (const auto& obstacle : obstacles) {
+        int hori = obstacle.getPos().second, vert = obstacle.getPos().first;
+        QBrush obstaclebrush(obstacleColor);
+        painter.setBrush(obstaclebrush);
+        painter.drawRect(hori * Length, vert * Length, Length, Length);
+    }
+    {
+        int hori = fruit->getPos().second, vert = fruit->getPos().first;
+        QBrush fruitbrush(fruitColor);
+        painter.setBrush(fruitbrush);
+        painter.drawRect(hori * Length, vert * Length, Length, Length);
+    }
+    QPoint cursorPos = mapFromGlobal(QCursor::pos());
+    if (inTheMap(cursorPos)) {
+        Point cursorCoord = Pix2Map(cursorPos);
+        QBrush cursorBrush(QColor("#000000"));
+        //qDebug() << int(getCoordType(cursorCoord));
+        switch (getCoordType(cursorCoord)) {
+            case (Block::Nothing):
+                cursorBrush.setColor(QColor("#F6EEE4"));
+                break;
+            case (Block::Snake):
+                cursorBrush.setColor(snake1->getBodyColorBright());
+                break;
+            case (Block::Head):
+                cursorBrush.setColor(snake1->getHeadColorBright());
+                break;
+            case (Block::Obstacle):
+                cursorBrush.setColor(QColor("#F0916A"));
+                break;
+            case (Block::Fruit):
+                cursorBrush.setColor(fruitColorBright);
+                break;
+        }
+        painter.setBrush(cursorBrush);
+        int hori = cursorCoord.second, vert = cursorCoord.first;
+        painter.drawRect(hori * Length, vert * Length, Length, Length);
     }
 }
 
 void MainWindow::mousePressEvent(QMouseEvent *event) {
     if (status == Status::NotBegin) {
         QPoint pos = event->pos();
-        if (pos.x() < 170 || pos.x() > 770 || pos.y() < 60 || pos.y() > 660) {
+        if (inTheMap(pos) == false) {
             return;
         }
-        QPoint temp = Pix2Map(event->pos());
-        if (grid[temp.y()][temp.x()] == Block::Nothing) {
-            grid[temp.y()][temp.x()] = Block::Obstacle;
-        } else if (grid[temp.y()][temp.x()] == Block::Obstacle) {
-            grid[temp.y()][temp.x()] = Block::Nothing;
-        }
-    } repaint();
+        Point temp = Pix2Map(event->pos());
+        temp = qMakePair(temp.first, temp.second);
+        if (getCoordType(temp) == Block::Nothing) {
+            obstacles.insert(Obstacle(temp));
+        } else if (getCoordType(temp) == Block::Obstacle) {
+            obstacles.remove(Obstacle(temp));
+        } repaint();
+    }
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) { //WASD and Vim-Style HJKL supported:)
@@ -193,170 +218,136 @@ void MainWindow::mouseMoveEvent(QMouseEvent*) {
     repaint();
 }
 
-QPoint MainWindow::getNewTail(QPoint tail) { //Search for new Tail Position
-    int x_offset = dx[int(grid_b[tail.x()][tail.y()]) - 1];
-    int y_offset = dy[int(grid_b[tail.x()][tail.y()]) - 1];
-    return QPoint(tail.x() + x_offset, tail.y() + y_offset);
-}
-
-QPoint MainWindow::getNewHead(QPoint head, Direction direction) { //Generate new Head position
-    int x_offset = dx[int(direction) - 1], y_offset = dy[int(direction) - 1];
-    return QPoint(head.x() + x_offset, head.y() + y_offset);
-}
-
-void MainWindow::runSingleStep() {
+void MainWindow::runSingleStep() {  
+    bool everyThingFine = true;
     if (operations.empty() == false) {
         Direction neodirection = operations.dequeue();
-        while ((neodirection == direction || int(neodirection) + int(direction) == 5) && operations.empty() == false) {
+        while (!snake1->setDirection(neodirection) && !operations.empty()) {
             neodirection = operations.dequeue();
         }
-        if (neodirection != direction && int(neodirection) + int(direction) != 5) {
-            direction = neodirection;
-        }
-    } //else there are no valid operations, just keep the current direction.
-    tick_count  += 1;
-    if (latency > 0) {
-        latency -= 1;
-    }
-    QPoint neoHeadcoord = getNewHead(headcoord, direction);
-    QPoint neoTailcoord = getNewTail(tailcoord);
-    if (check(neoHeadcoord) == false) {
+    } //否则就没有合法操作了,保持当前方向即可.
+    Point newHead = snake1->getNewHead();
+    if (checkOverFlow(newHead)) { //撞墙了
+        QMessageBox::critical(this, "Game over!", "Game over!", QMessageBox::Ok);
+        everyThingFine = false;
         setEnded();
-        auto box = QMessageBox::critical(this, "Game Over!", "Game over!", QMessageBox::Ok);
-        if (box == QMessageBox::Ok) {
-            repaint();
-            return;
+    }
+    if (getCoordType(newHead) == Block::Obstacle) { //撞障碍物了
+        switch (special) {
+            case Special::Ordinary:
+            case Special::Transparent:
+                QMessageBox::critical(this, "Game over!", "Game over!", QMessageBox::Ok);
+                setEnded();
+                everyThingFine = false;
+                break;
+            case Special::EatGlass:
+                obstacles.remove(Obstacle(newHead));
+                break;
         }
     }
-    if (eat(neoHeadcoord)) {
-        latency += 3;
+    if (getCoordType(newHead) == Block::Snake) { //撞到身体了
+        switch (special) {
+            case Special::Ordinary:
+            case Special::EatGlass:
+                QMessageBox::critical(this, "Game over!", "Game over!", QMessageBox::Ok);
+                setEnded();
+                everyThingFine = false;
+                break;
+            //case Special::Transparent:
+            //  do nothing
+        }
     }
-    if (latency == 0) {
-        grid[tailcoord.x()][tailcoord.y()] = Block::Nothing;
-        //grid_f[tailcoord.x()][tailcoord.y()] = Direction::Nothing;
-        grid_b[tailcoord.x()][tailcoord.y()] = Direction::Nothing;
-        tailcoord = neoTailcoord;
+    if (getCoordType(newHead) == Block::Fruit) { //吃到水果了
+        snake1->eat(); //长度+3
+        generateNewFruit(newHead);
     }
-
-    grid[headcoord.x()][headcoord.y()] = Block::Snake;
-    grid_b[headcoord.x()][headcoord.y()] = direction;
-    headcoord = neoHeadcoord;
-    grid[headcoord.x()][headcoord.y()] = Block::Head;
-    QString stepnum = QString("%1 step").arg(tick_count);
-    if (tick_count != 1) {
-        stepnum += "s";
+    if (everyThingFine) {
+        snake1->setNewHead(newHead);
+        snake1->setNewTail();
     }
-    ui->TimeLabel->setText(stepnum);
-    QString scoretext = QString("%1 score").arg(score);
-    if (score > 1) {
-        scoretext += "s";
+    tickCount += 1;
+    QString stepNum = QString("%1 step").arg(tickCount);
+    if (tickCount > 1) {
+        stepNum += "s";
     }
-    ui->scoreLabel->setText(scoretext);
-}
-
-void MainWindow::generateFruit() {
-    int randval = QRandomGenerator::global()->bounded(0, 1601), cx, cy;
-    do {
-       cx = randval / 40, cy = randval % 40;
-       randval = QRandomGenerator::global()->bounded(0, 1601);
-    } while (grid[cx][cy] != Block::Nothing);
-    grid[cx][cy] = Block::Fruit;
-    repaint();
-}
-
-bool MainWindow::eat(QPoint head) {
-    if (grid[head.x()][head.y()] == Block::Fruit) {
-        score += ui->spinBox->value();
-        generateFruit();
-        return true;
-    } else return false;
-}
-
-bool MainWindow::check(QPoint head) {
-    if (head.x() < 0 || head.y() < 0 || head.x() >= Height || head.y() >= Width) {
-        return false;
+    ui->TimeLabel->setText(stepNum);
+    QString scoreText = QString("%1 score").arg(snake1->getScore());
+    if (snake1->getScore() > 1) {
+        scoreText += "s";
     }
-    switch (special) {
-        case Special::EatGlass:
-            if (grid[head.x()][head.y()] == Block::Nothing ||
-                grid[head.x()][head.y()] == Block::Fruit ||
-                grid[head.x()][head.y()] == Block::Obstacle) {
-                return true;
-            } else return false;
-            break;
-        default:
-            if (grid[head.x()][head.y()] == Block::Nothing ||
-                grid[head.x()][head.y()] == Block::Fruit) {
-                return true;
-            } else return false;
-    }
+    ui->scoreLabel->setText(scoreText);
 }
 
 void MainWindow::reset() {
-    for (int i = 0; i < Height; i++) {
-        for (int j = 0; j < Width; j++) {
-            grid[i][j] = Block::Nothing;
-            grid_b[i][j] = Direction::Nothing;
-        }
-    }
-    grid[10][10] = Block::Snake;
-    grid_b[10][10] = Direction::Right;
-    grid[10][11] = Block::Head;
-    tailcoord = QPoint(10, 10);
-    headcoord = QPoint(10, 11);
-    direction = Direction::Right;
-    tick_count = 0;
+    snake1 = new Snake();
+    generateNewFruit(qMakePair(-1, 1));
+    tickCount = 0;
     ui->TimeLabel->setText(QString("0 step"));
-    score = 0;
     ui->scoreLabel->setText(QString("0 score"));
     setNotBegin();
-    generateFruit();
+}
+
+QJsonObject MainWindow::obstaclesToJson() const {
+    QString obstacleXString, obstacleYString;
+    for (const auto& each : obstacles) {
+        obstacleXString += QString::number(each.getPos().first);
+        obstacleYString += QString::number(each.getPos().second);
+        if (each != *obstacles.rbegin()) {
+            obstacleXString += ",";
+            obstacleYString += ",";
+        }
+    }
+    QJsonObject obj;
+    obj.insert("posX", obstacleXString);
+    obj.insert("posY", obstacleYString);
+    return obj;
 }
 
 void MainWindow::save() {
-    if (savefile.exists() == false) {
-        QString filename = QFileDialog::getOpenFileName(this, tr("Select Save File"), "*.json");
-        savefile.setFileName(filename);
+    if (saveFile.exists() == false) {
+        QString fileName = QFileDialog::getOpenFileName(this, tr("Select Save File"), "$HOME/Documents", "*.json");
+        saveFile.setFileName(fileName);
     }
-    if (!savefile.open(QIODevice::WriteOnly)) {
+    if (!saveFile.open(QIODevice::WriteOnly)) {
         return;
     }
-    QTextStream outstream(&savefile);
+    QTextStream outstream(&saveFile);
     QJsonObject obj;
-    obj.insert("status", int(status));
-    obj.insert("direction", int(direction));
-    obj.insert("tick_count", tick_count);
-    obj.insert("score", score);
-    obj.insert("headcoord_x", headcoord.x());
-    obj.insert("headcoord_y", headcoord.y());
-    obj.insert("tailcoord_x", tailcoord.x());
-    obj.insert("tailcoord_y", tailcoord.y());
-    QString grid_str, grid_b_str;
-    for (int i = 0; i < Height; i++) {
-        for (int j = 0; j < Width; j++) {
-            grid_str += QString::number(int(grid[i][j]));
-        } grid_str += "@";
-    }
-    obj.insert("grid", grid_str);
-    for (int i = 0; i < Height; i++) {
-        for (int j = 0; j < Width; j++) {
-            grid_b_str += QString::number(int(grid_b[i][j]));
-        } grid_b_str += "@";
-    }
-    obj.insert("grid_b", grid_b_str);
+    obj.insert("windowWidth", width());
+    obj.insert("windowHeight", height());
+    obj.insert("Width", Width);
+    obj.insert("Height", Height);
+    obj.insert("snake1", snake1->toJson());
+    obj.insert("obstacles", obstaclesToJson());
+    obj.insert("fruit", fruit->toJson());
+    obj.insert("tickCount", tickCount);
     QJsonDocument doc = QJsonDocument(obj);
     QByteArray savedoc = doc.toJson();
     outstream << savedoc;
 }
 
+void MainWindow::jsonToObstacles(QJsonObject obj) {
+    obstacles.clear();
+    QString posXString = obj.value("posX").toString();
+    QString posYString = obj.value("posY").toString();
+    if (posXString == tr("")) {
+        return;
+    }
+    QStringList posXList = posXString.split(",");
+    QStringList posYList = posYString.split(",");
+    for (int i = 0; i < posXList.size(); i++) {
+        obstacles.insert(Obstacle(qMakePair(posXList[i].toInt(), posYList[i].toInt())));
+    }
+}
+
 void MainWindow::load() {
-    QString filename = QFileDialog::getOpenFileName(this, tr("Select Load File"), ".");
-    loadfile.setFileName(filename);
-    if (!loadfile.open(QIODevice::ReadOnly)) {
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Load File"), "$HOME/Documents", "*.json");
+    loadFile.setFileName(fileName);
+    if (!loadFile.open(QIODevice::ReadOnly)) {
         qDebug() << "Load Failed";
         return;
     }
-    QByteArray array = loadfile.readAll();
+    QByteArray array = loadFile.readAll();
     QJsonParseError parseError;
     QJsonDocument jsonDoc(QJsonDocument::fromJson(array, &parseError));
     if (parseError.error != QJsonParseError::NoError) {
@@ -364,24 +355,15 @@ void MainWindow::load() {
         return;
     }
     QJsonObject obj = jsonDoc.object();
-    status = Status(obj.value("status").toInt());
-    direction = Direction(obj.value("direction").toInt());
-    tick_count = obj.value("tick_count").toInt();
-    score = obj.value("score").toInt();
-    headcoord.setX(obj.value("headcoord_x").toInt());
-    headcoord.setY(obj.value("headcoord_y").toInt());
-    tailcoord.setX(obj.value("tailcoord_x").toInt());
-    tailcoord.setY(obj.value("tailcoord_y").toInt());
-    QString grid_str = obj.value("grid").toString();
-    QString grid_b_str = obj.value("grid_b").toString();
-    QStringList grid_list = grid_str.split("@");
-    QStringList grid_b_list = grid_b_str.split("@");
-    for (int i = 0; i < Height; i++) {
-        for (int j = 0; j < Width; j++) {
-            grid[i][j] = Block(grid_list[i][j].unicode() - '0');
-            grid_b[i][j] = Direction(grid_b_list[i][j].unicode() - '0');
-        }
-    }
+    tickCount = obj.value("tickCount").toInt();
+    Height = obj.value("Height").toInt();
+    Width = obj.value("Width").toInt();
+    setFixedSize(obj.value("windowWidth").toInt(), obj.value("windowHeight").toInt());
+    delete snake1;
+    delete fruit;
+    snake1 = new Snake(obj.value("snake1").toObject());
+    fruit = new Fruit(obj.value("fruit").toObject());
+    jsonToObstacles(obj.value("obstacles").toObject());
     setPaused();
 }
 
@@ -402,6 +384,9 @@ void MainWindow::setGaming() {
     if (code == tr("EATGLASS")) {
         setWindowTitle(tr("I can eat glass. It doesn't hurt me."));
         special = Special::EatGlass;
+    } else if (code == tr("TRANSPARENT")){
+        setWindowTitle(tr("Hey! I feel a bit weird!"));
+        special = Special::Transparent;
     } else {
         setWindowTitle(tr("MySnake"));
         special = Special::Ordinary;
@@ -422,7 +407,6 @@ void MainWindow::setGaming() {
 
 void MainWindow::setPaused() {
     status = Status::Paused;
-    //globalTimer->stop();
     ui->startButton->setDisabled(true);
     ui->pauseButton->setDisabled(true);
     ui->continueButton->setDisabled(false);
@@ -431,7 +415,6 @@ void MainWindow::setPaused() {
     ui->loadButton->setDisabled(true);
     ui->spinBox->setDisabled(true);
     setFocus(Qt::MouseFocusReason);
-    setFixedSize(width(), height());
 }
 
 void MainWindow::setEnded() {
@@ -444,7 +427,8 @@ void MainWindow::setEnded() {
     ui->loadButton->setDisabled(true);
     ui->spinBox->setDisabled(true);
     setFocus(Qt::MouseFocusReason);
-    setFixedSize(width(), height());
+    setMinimumSize(width(), height());
+    setMaximumSize(114514, 114514);
 }
 
 void MainWindow::on_actionDon_t_touch_triggered() {
@@ -481,4 +465,38 @@ void MainWindow::on_touchButton_3_clicked() {
     ui->touchButton_1->setVisible(false);
     ui->touchButton_2->setVisible(false);
     ui->touchButton_3->setVisible(false);
+}
+
+bool MainWindow::inTheMap(QPoint _point) {
+    int px = _point.x(), py = _point.y();
+    return (px >= leftpos && px <= leftpos + Width * Length && py >= toppos && py <= toppos + Height * Length);
+}
+
+bool MainWindow::checkOverFlow(Point pos) {
+    return (pos.first < 0 || pos.second < 0 || pos.first >= Height || pos.second >= Width);
+}
+
+void MainWindow::generateNewFruit(Point newHead) {
+    fruit->setNewFruit(qMakePair(0, 0));
+    Point tryFruit = fruit->generateNewFruit(Height, Width);
+    while (getCoordType(tryFruit) != Block::Nothing || tryFruit == newHead) {
+        tryFruit = fruit->generateNewFruit(Height, Width);
+    } fruit->setNewFruit(tryFruit); //生成新水果
+}
+
+Assist::Block MainWindow::getCoordType(Point pos) {
+    if (snake1->validPos(pos) == false) {
+        if (pos == *snake1->expose().rbegin()) {
+            return Block::Head;
+        } else {
+            return Block::Snake;
+        }
+    }
+    if (fruit->validPos(pos) == false) {
+        return Block::Fruit;
+    }
+    if (obstacles.contains(Obstacle(pos))) {
+        return Block::Obstacle;
+    }
+    return Block::Nothing;
 }
