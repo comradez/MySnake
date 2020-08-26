@@ -34,34 +34,42 @@ MainWindow::MainWindow(QWidget *parent)
     ui->spinBox->setMaximum(5);
     ui->spinBox->setMinimum(1);
 
-    setNotBegin();
     globalTimer->start(50);
-    connect(ui->startButton, &QPushButton::clicked, [=]() {
-        setGaming();
-    });
-    connect(ui->pauseButton, &QPushButton::clicked, [=]() {
-        setPaused() ;
-    });
-    connect(ui->continueButton, &QPushButton::clicked, [=]() {
-        setGaming();
-    });
-    connect(ui->restartButton, &QPushButton::clicked, [=]() {
-        reset();
-    });
-    connect(ui->saveButton, &QPushButton::clicked, [=]() {
-        save();
-    });
-    connect(ui->loadButton, &QPushButton::clicked, [=]() {
-        load();
-    });
-    connect(ui->exitButton, &QPushButton::clicked, [=]() {
-        close();
-    });
+    connect(ui->startButton, &QPushButton::clicked, this, &MainWindow::setGaming);
+    connect(ui->pauseButton, &QPushButton::clicked, this, &MainWindow::setPaused);
+    connect(ui->continueButton, &QPushButton::clicked, this, &MainWindow::setGaming);
+    connect(ui->restartButton, &QPushButton::clicked, this, &MainWindow::reset);
+    connect(ui->saveButton, &QPushButton::clicked, this, &MainWindow::save);
+    connect(ui->loadButton, &QPushButton::clicked, this, &MainWindow::load);
+    connect(ui->exitButton, &QPushButton::clicked, this, &MainWindow::close);
+    connect(ui->actionStart, &QAction::triggered, this, &MainWindow::setGaming);
+    connect(ui->actionPause, &QAction::triggered, this, &MainWindow::setPaused);
+    connect(ui->actionContinue, &QAction::triggered, this, &MainWindow::setGaming);
+    connect(ui->actionRestart, &QAction::triggered, this, &MainWindow::reset);
+    connect(ui->actionSave, &QAction::triggered, this, &MainWindow::save);
+    connect(ui->actionLoad, &QAction::triggered, this, &MainWindow::load);
+    connect(ui->actionExit, &QAction::triggered, this, &MainWindow::close);
+
+    actionStart = ui->toolBar->addAction(QIcon(":/icons/start.svg"), "Start");
+    actionPause = ui->toolBar->addAction(QIcon(":/icons/pause.svg"), "Pause");
+    actionContinue = ui->toolBar->addAction(QIcon(":/icons/continue.svg"), "Continue");
+    actionRestart = ui->toolBar->addAction(QIcon(":/icons/restart.svg"), "Restart");
+    actionSave = ui->toolBar->addAction(QIcon(":/icons/save.svg"), "Save");
+    actionLoad = ui->toolBar->addAction(QIcon(":/icons/load.svg"), "Load");
+    actionExit = ui->toolBar->addAction(QIcon(":/icons/exit.svg"), "Exit");
+    connect(actionStart, &QAction::triggered, this, &MainWindow::setGaming);
+    connect(actionPause, &QAction::triggered, this, &MainWindow::setPaused);
+    connect(actionContinue, &QAction::triggered, this, &MainWindow::setGaming);
+    connect(actionRestart, &QAction::triggered, this, &MainWindow::reset);
+    connect(actionSave, &QAction::triggered, this, &MainWindow::save);
+    connect(actionLoad, &QAction::triggered, this, &MainWindow::load);
+    connect(actionExit, &QAction::triggered, this, &MainWindow::close);
     connect(globalTimer, &QTimer::timeout, [=]() {
         if (status == Status::Gaming)
             runSingleStep();
         repaint();
     });
+    setNotBegin();
     repaint();
 }
 
@@ -125,7 +133,6 @@ void MainWindow::paintEvent(QPaintEvent*) {
     if (inTheMap(cursorPos)) {
         Point cursorCoord = Pix2Map(cursorPos);
         QBrush cursorBrush(QColor("#000000"));
-        //qDebug() << int(getCoordType(cursorCoord));
         switch (getCoordType(cursorCoord)) {
             case (Block::Nothing):
                 cursorBrush.setColor(QColor("#F6EEE4"));
@@ -167,14 +174,11 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
 
 void MainWindow::keyPressEvent(QKeyEvent *event) { //WASD and Vim-Style HJKL supported:)
     switch (event->key()) {
-        case Qt::Key_G:
-            if (status == Status::NotBegin) {
-                setGaming();
-            } break;
         case Qt::Key_F:
+        case Qt::Key_Space:
             if (status == Status::Gaming) {
                 setPaused();
-            } else if (status == Status::Paused) {
+            } else if (status == Status::Paused || status == Status::NotBegin) {
                 setGaming();
             } break;
         case Qt::Key_R:
@@ -369,13 +373,7 @@ void MainWindow::load() {
 
 void MainWindow::setNotBegin() {
     status = Status::NotBegin;
-    ui->startButton->setDisabled(false);
-    ui->pauseButton->setDisabled(true);
-    ui->continueButton->setDisabled(true);
-    ui->restartButton->setDisabled(true);
-    ui->saveButton->setDisabled(true);
-    ui->loadButton->setDisabled(false);
-    ui->spinBox->setDisabled(false);
+    setState("0111100");
     setFocus(Qt::MouseFocusReason);
 }
 
@@ -394,38 +392,20 @@ void MainWindow::setGaming() {
     globalTimer->stop();
     globalTimer->start(speeds[ui->spinBox->value() - 1]);
     status = Status::Gaming;
-    ui->startButton->setDisabled(true);
-    ui->pauseButton->setDisabled(false);
-    ui->continueButton->setDisabled(true);
-    ui->restartButton->setDisabled(true);
-    ui->saveButton->setDisabled(true);
-    ui->loadButton->setDisabled(true);
-    ui->spinBox->setDisabled(true);
+    setState("1011111");
     setFocus(Qt::MouseFocusReason);
     setFixedSize(width(), height());
 }
 
 void MainWindow::setPaused() {
     status = Status::Paused;
-    ui->startButton->setDisabled(true);
-    ui->pauseButton->setDisabled(true);
-    ui->continueButton->setDisabled(false);
-    ui->restartButton->setDisabled(false);
-    ui->saveButton->setDisabled(false);
-    ui->loadButton->setDisabled(true);
-    ui->spinBox->setDisabled(true);
+    setState("1100011");
     setFocus(Qt::MouseFocusReason);
 }
 
 void MainWindow::setEnded() {
     status = Status::Ended;
-    ui->startButton->setDisabled(true);
-    ui->pauseButton->setDisabled(true);
-    ui->continueButton->setDisabled(true);
-    ui->restartButton->setDisabled(false);
-    ui->saveButton->setDisabled(true);
-    ui->loadButton->setDisabled(true);
-    ui->spinBox->setDisabled(true);
+    setState("1110111");
     setFocus(Qt::MouseFocusReason);
     setMinimumSize(width(), height());
     setMaximumSize(114514, 114514);
@@ -499,4 +479,31 @@ Assist::Block MainWindow::getCoordType(Point pos) {
         return Block::Obstacle;
     }
     return Block::Nothing;
+}
+
+void MainWindow::setState(QString code) {
+    bool* temp = new bool[7];
+    for (int i = 0; i < 7; i++) {
+        temp[i] = bool(code[i].unicode() - '0');
+    }
+    ui->startButton->setDisabled(temp[0]);
+    ui->actionStart->setDisabled(temp[0]);
+    actionStart->setDisabled(temp[0]);
+    ui->pauseButton->setDisabled(temp[1]);
+    ui->actionPause->setDisabled(temp[1]);
+    actionPause->setDisabled(temp[1]);
+    ui->continueButton->setDisabled(temp[2]);
+    ui->actionContinue->setDisabled(temp[2]);
+    actionContinue->setDisabled(temp[2]);
+    ui->restartButton->setDisabled(temp[3]);
+    ui->actionRestart->setDisabled(temp[3]);
+    actionRestart->setDisabled(temp[3]);
+    ui->saveButton->setDisabled(temp[4]);
+    ui->actionSave->setDisabled(temp[4]);
+    actionSave->setDisabled(temp[4]);
+    ui->loadButton->setDisabled(temp[5]);
+    ui->actionLoad->setDisabled(temp[5]);
+    actionLoad->setDisabled(temp[5]);
+    ui->spinBox->setDisabled(temp[6]);
+    delete[] temp;
 }

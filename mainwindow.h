@@ -76,6 +76,13 @@ private:
     QColor canvasColor, obstacleColor, fruitColor;
     QColor canvasColorBright, obstacleColorBright, fruitColorBright;
     Fruit* fruit;
+    QAction* actionStart;
+    QAction* actionPause;
+    QAction* actionContinue;
+    QAction* actionRestart;
+    QAction* actionSave;
+    QAction* actionLoad;
+    QAction* actionExit;
 
     const int speeds[5] = {150, 125, 100, 75, 50};
     int leftpos = 170, toppos = 60, Height = 40, Width = 40, tickCount = 0;
@@ -97,6 +104,7 @@ private:
     void save();
     void load();
     void reset();
+    void setState(QString code);
     Block getCoordType(Point pos);
     QJsonObject obstaclesToJson() const;
     void jsonToObstacles(QJsonObject obj);
