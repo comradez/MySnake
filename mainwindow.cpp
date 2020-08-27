@@ -218,10 +218,6 @@ void MainWindow::keyPressEvent(QKeyEvent *event) { //WASD and Vim-Style HJKL sup
     }
 }
 
-void MainWindow::mouseMoveEvent(QMouseEvent*) {
-    repaint();
-}
-
 void MainWindow::runSingleStep() {  
     bool everyThingFine = true;
     if (operations.empty() == false) {
@@ -257,8 +253,8 @@ void MainWindow::runSingleStep() {
                 setEnded();
                 everyThingFine = false;
                 break;
-            //case Special::Transparent:
-            //  do nothing
+            case Special::Transparent:
+                ; //do nothing
         }
     }
     if (getCoordType(newHead) == Block::Fruit) { //吃到水果了
@@ -326,8 +322,8 @@ void MainWindow::save() {
     obj.insert("fruit", fruit->toJson());
     obj.insert("tickCount", tickCount);
     QJsonDocument doc = QJsonDocument(obj);
-    QByteArray savedoc = doc.toJson();
-    outstream << savedoc;
+    QByteArray saveDoc = doc.toJson();
+    outstream << saveDoc;
 }
 
 void MainWindow::jsonToObstacles(QJsonObject obj) {
@@ -351,9 +347,9 @@ void MainWindow::load() {
         qDebug() << "Load Failed";
         return;
     }
-    QByteArray array = loadFile.readAll();
+    QByteArray Array = loadFile.readAll();
     QJsonParseError parseError;
-    QJsonDocument jsonDoc(QJsonDocument::fromJson(array, &parseError));
+    QJsonDocument jsonDoc(QJsonDocument::fromJson(Array, &parseError));
     if (parseError.error != QJsonParseError::NoError) {
         qDebug() << "Parse Failed";
         return;
@@ -393,7 +389,7 @@ void MainWindow::setGaming() {
     globalTimer->start(speeds[ui->spinBox->value() - 1]);
     status = Status::Gaming;
     setState("1011111");
-    setFocus(Qt::MouseFocusReason);
+    //setFocus(Qt::MouseFocusReason);
     setFixedSize(width(), height());
 }
 

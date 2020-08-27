@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>820</width>
-    <height>723</height>
+    <width>825</width>
+    <height>745</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -96,7 +96,7 @@
     <property name="geometry">
      <rect>
       <x>170</x>
-      <y>40</y>
+      <y>60</y>
       <width>600</width>
       <height>600</height>
      </rect>
@@ -105,7 +105,7 @@
      <property name="geometry">
       <rect>
        <x>130</x>
-       <y>130</y>
+       <y>150</y>
        <width>111</width>
        <height>41</height>
       </rect>
@@ -249,7 +249,7 @@ is PERFECT</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>820</width>
+     <width>825</width>
      <height>28</height>
     </rect>
    </property>

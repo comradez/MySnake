@@ -44,7 +44,6 @@ public:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
 
 private slots:
     void on_actionDon_t_touch_triggered();
@@ -85,7 +84,7 @@ private:
     QAction* actionExit;
 
     const int speeds[5] = {150, 125, 100, 75, 50};
-    int leftpos = 170, toppos = 60, Height = 40, Width = 40, tickCount = 0;
+    int leftpos = 170, toppos = 80, Height = 40, Width = 40, tickCount = 0;
     const static int Length = 15, Margin = 20;
     QTimer* globalTimer;
     QQueue<Direction> operations;
