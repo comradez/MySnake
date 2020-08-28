@@ -284,6 +284,7 @@ void MainWindow::reset() {
     tickCount = 0;
     ui->TimeLabel->setText(QString("0 step"));
     ui->scoreLabel->setText(QString("0 score"));
+    obstacles.clear();
     setNotBegin();
 }
 
