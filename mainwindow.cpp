@@ -306,7 +306,7 @@ QJsonObject MainWindow::obstaclesToJson() const {
 
 void MainWindow::save() {
     if (saveFile.exists() == false) {
-        QString fileName = QFileDialog::getOpenFileName(this, tr("Select Save File"), "$HOME/Documents", "*.json");
+        QString fileName = QFileDialog::getSaveFileName(this, tr("Select Save File"), "$HOME/Documents", "*.json");
         saveFile.setFileName(fileName);
     }
     if (!saveFile.open(QIODevice::WriteOnly)) {
